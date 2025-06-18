@@ -13,6 +13,15 @@ return {
       terraformls = {
         filetypes = { "tf", "terraform", "terraform-vars" },
       },
+      pyright = {
+        settings = {
+          python = {
+            pythonPath = ".venv/bin/python",
+            venvPath = ".",
+            venv = ".venv",
+          },
+        },
+      },
       vtsls = {
         settings = {
           typescript = {
