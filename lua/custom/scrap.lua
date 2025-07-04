@@ -1,11 +1,5 @@
 -- ~/.config/nvim/lua/custom/scrap.lua
 
-local function disable_virtual_text()
-  vim.diagnostic.config({
-    virtual_text = false,
-  })
-end
-
 local function scrap()
   -- Get the Neovim shared data directory
   local data_dir = vim.fn.stdpath("data")

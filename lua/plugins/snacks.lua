@@ -69,16 +69,16 @@ return {
               paths = false,
             },
           },
-          explorer = {
-            win = {
-              list = {
-                keys = {
-                  ["s"] = "edit_vsplit",
-                  ["t"] = "edit_tab",
-                },
-              },
-            },
-          },
+          -- explorer = {
+          --   win = {
+          --     list = {
+          --       keys = {
+          --         ["s"] = "edit_vsplit",
+          --         ["t"] = "edit_tab",
+          --       },
+          --     },
+          --   },
+          -- },
         },
         actions = {
           git_browse = function(picker, item)
