@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: kafka-endpoint
+  name: kafka-endpoint
+  namespace: app
+spec:
+  ports:
+  - name: metrics
+    port: 11001
+    protocol: TCP
+    targetPort: 11001
+  - name: node-metrics
+    port: 11002
+    protocol: TCP
+    targetPort: 11002
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  labels:
+    app: kafka-endpoint
+  name: kafka-endpoint
+  namespace: app
+subsets:
+- addresses:
+  - ip: 192.168.17.72
+  - ip: 192.168.19.101
+  ports:
+  - name: metrics
+    port: 11001
+    protocol: TCP
+  - name: node-metrics
+    port: 11002
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    release: observability
+  name: kafka-monitoring
+  namespace: app
+spec:
+  endpoints:
+  - honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: metrics
+    scheme: http
+    scrapeTimeout: 10s
+  - honorLabels: true
+    interval: 30s
+    path: /metrics
+    port: node-metrics
+    scheme: http
+    scrapeTimeout: 10s
+  jobLabel: kafka-metrics
+  namespaceSelector:
+    matchNames:
+    - app
+  selector:
+    matchLabels:
+      app: kafka-endpoint
+
