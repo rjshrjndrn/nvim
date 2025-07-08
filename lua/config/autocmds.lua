@@ -36,6 +36,24 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
         if line:match(config.pattern) then
           vim.bo.filetype = filetype
           vim.b.yaml_schema = config.schema
+
+          -- Notify LSP about schema change
+          vim.schedule(function()
+            local clients = vim.lsp.get_clients({ name = "yamlls" })
+            for _, client in ipairs(clients) do
+              if client.attached_buffers[vim.api.nvim_get_current_buf()] then
+                local buf_uri = vim.uri_from_bufnr(0)
+                local settings = client.config.settings or {}
+                settings.yaml = settings.yaml or {}
+                settings.yaml["schemas"] = settings.yaml.schemas or {}
+                settings.yaml.schemas[config.schema] = buf_uri
+
+                client.notify("workspace/didChangeConfiguration", {
+                  settings = settings,
+                })
+              end
+            end
+          end)
           return
         end
       end
