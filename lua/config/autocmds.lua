@@ -34,6 +34,7 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
     for _, line in ipairs(lines) do
       for filetype, config in pairs(schema_mappings) do
         if line:match(config.pattern) then
+          vim.notify("Detected schema: " .. config.schema, vim.log.levels.INFO)
           vim.bo.filetype = filetype
           vim.b.yaml_schema = config.schema
 
@@ -76,55 +77,6 @@ vim.filetype.add({
 for filetype, _ in pairs(schema_mappings) do
   vim.treesitter.language.register("yaml", filetype)
 end
-
--- Optional: Add LSP configuration that uses the schema
-local function setup_yaml_lsp()
-  -- Check if you have lspconfig
-  local ok, lspconfig = pcall(require, "lspconfig")
-  if not ok then
-    return
-  end
-
-  -- Create schemas table for yamlls
-  local schemas = {}
-  for filetype, config in pairs(schema_mappings) do
-    -- Map schema to file pattern
-    schemas[config.schema] = string.format("*%s.{yaml,yml}", filetype)
-  end
-
-  lspconfig.yamlls.setup({
-    settings = {
-      yaml = {
-        schemas = schemas,
-        validate = true,
-        completion = true,
-        hover = true,
-        schemaStore = {
-          enable = true,
-          url = "https://www.schemastore.org/api/json/catalog.json",
-        },
-      },
-    },
-    on_attach = function(client, bufnr)
-      -- Check if buffer has a schema and apply it
-      local schema_url = vim.b.yaml_schema
-      if schema_url then
-        local buf_uri = vim.uri_from_bufnr(bufnr)
-        local settings = client.config.settings or {}
-        settings.yaml = settings.yaml or {}
-        settings.yaml.schemas = settings.yaml.schemas or {}
-        settings.yaml.schemas[schema_url] = buf_uri
-
-        client.notify("workspace/didChangeConfiguration", {
-          settings = settings,
-        })
-      end
-    end,
-  })
-end
-
--- Call the setup function
-setup_yaml_lsp()
 
 -- Optional: Create user commands for manual schema injection
 vim.api.nvim_create_user_command("InjectSchema", function(opts)
