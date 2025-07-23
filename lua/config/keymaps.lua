@@ -10,6 +10,8 @@ local opts = { silent = true }
 keymap("x", "p", '"_dP', opts)
 -- keymap("n", "<leader>y", '"+y', opts)
 keymap({ "n", "v" }, "<leader>y", '"+y', opts)
+keymap("n", "<leader>Y", '"+y$', opts)
+keymap("v", "Y", '"+y', opts)
 keymap("n", "<leader>P", '"+P', opts)
 keymap("n", "<leader>p", '"+p', opts)
 keymap("n", "<C-Y>", 'magg0"+yG`a:delmarks a<CR>', opts)
