@@ -86,3 +86,8 @@ end
 vim.g.neovide_transparency = 0.8
 vim.g.neovide_window_blurred = true
 vim.o.guifont = "JetBrainsMono Nerd Font:h14" -- text below applies for VimScript
+
+-- Better symbol support
+vim.g.have_nerd_font = true
+-- Status bar already have one
+vim.o.showmode = false
