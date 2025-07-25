@@ -1,15 +1,14 @@
 local M = {
-  { "tpope/vim-fugitive", lazy = false },
-  { "tpope/vim-rhubarb", lazy = false },
+  {
+    "tpope/vim-fugitive",
+    lazy = true,
+    keys = {
+      { "gw", "<cmd>Gwrite<CR>", desc = "Git write" },
+      { "<leader>gc", "<cmd>Git commit --sign<CR>", desc = "Git commit signed" },
+      { "gs", "<cmd>Git<CR>", desc = "Git status" },
+    },
+    cmd = { "Git", "Gwrite", "Gdiffsplit", "Gread", "Ggrep", "Glog", "Gclog" },
+  },
 }
-
--- Shorten function name
-local keymap = vim.keymap.set
--- Silent keymap option
-local opts = { silent = true }
-
-keymap("n", "gw", "<cmd>Gwrite<CR>", opts)
-keymap("n", "gc", "<cmd>Git commit --sign<CR>", opts)
-keymap("n", "gs", "<cmd>Git<CR>", opts)
 
 return M
