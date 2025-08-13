@@ -2,6 +2,7 @@ return {
   "folke/snacks.nvim",
   opts = function(_, opts)
     opts.dashboard = { enabled = false }
+    opts.explorer = { enabled = false }
     opts.scratch = {
       ft = "markdown",
       cmd = "Scratch",
