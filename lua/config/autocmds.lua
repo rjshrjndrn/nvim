@@ -17,11 +17,11 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 -- Create a schema mapping table for better organization
 local schema_mappings = {
   ["argocd-applicationset"] = {
-    pattern = "^kind:%s*ApplicationSet",
+    pattern = "^kind:%s*ApplicationSet%s*$",
     schema = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/argoproj.io/applicationset_v1alpha1.json",
   },
   ["argocd-application"] = {
-    pattern = "^kind:%s*Application",
+    pattern = "^kind:%s*Application%s*$",
     schema = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/argoproj.io/application_v1alpha1.json",
   },
 }
@@ -96,4 +96,33 @@ end, {
     return vim.tbl_keys(schema_mappings)
   end,
   desc = "Inject schema for current buffer",
+})
+-- Ensure schema is applied when yamlls attaches to a buffer
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.name == "yamlls" then
+      local buf_schema = vim.b[args.buf].yaml_schema
+      if buf_schema then
+        vim.schedule(function()
+          local buf_uri = vim.uri_from_bufnr(args.buf)
+
+          -- Ensure settings structure exists
+          client.config.settings = client.config.settings or {}
+          client.config.settings.yaml = client.config.settings.yaml or {}
+          client.config.settings.yaml.schemas = client.config.settings.yaml.schemas or {}
+
+          -- Set the schema for this specific file
+          client.config.settings.yaml.schemas[buf_schema] = buf_uri
+
+          -- Send configuration change to the server
+          client.notify("workspace/didChangeConfiguration", {
+            settings = client.config.settings,
+          })
+
+          vim.notify("Schema reapplied on LSP attach: " .. buf_schema, vim.log.levels.INFO)
+        end)
+      end
+    end
+  end,
 })
