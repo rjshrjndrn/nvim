@@ -10,9 +10,9 @@ return {
     -- LSP Server Settings
     ---@type lspconfig.options
     servers = {
-      terraformls = {
-        filetypes = { "tf", "terraform", "terraform-vars" },
-      },
+      -- terraformls = {
+      --   filetypes = { "tf", "terraform", "terraform-vars" },
+      -- },
       pyright = {
         settings = {
           python = {
@@ -21,6 +21,10 @@ return {
             venv = ".venv",
           },
         },
+      },
+      terraformls = {
+        cmd = { "terraform-lsp" },
+        filetypes = { "terraform" },
       },
       vtsls = {
         settings = {
