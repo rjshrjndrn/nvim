@@ -31,7 +31,7 @@ vim.o.shada = table.concat({
 
 vim.o.clipboard = ""
 -- disable LSP log to avoid infinitely growing log file
-vim.lsp.set_log_level("off")
+vim.lsp.log.set_level("off")
 
 -- vim folding
 -- ref: https://www.reddit.com/r/neovim/comments/1gi7ush/treesitter_is_amazing/
