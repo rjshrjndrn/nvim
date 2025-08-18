@@ -95,10 +95,13 @@ return {
       ansiblels = {
         filetypes = { "yaml.ansible" },
       },
+      nil_ls = {
+        mason = false,
+        setup = {
+          cmd = { "nil" },
+        },
+      },
     },
-    -- setup = {
-    --   yamlls = function(server, opts)
-    --     opts.on_attach = function(client, bufnr)
     --       vim.diagnostic.config({ virtual_text = false, signs = false }, bufnr)
     --     end
     --     require("lspconfig")[server].setup(opts)
