@@ -7,6 +7,6 @@ return {
   -- Have issue with nvim 12 and Gdiffsplit is not working
   {
     "folke/noice.nvim",
-    enabled = false,
+    -- enabled = false,
   },
 }
