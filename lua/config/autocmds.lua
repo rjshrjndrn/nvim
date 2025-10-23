@@ -55,11 +55,11 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
             local clients = vim.lsp.get_clients({ name = "yamlls" })
             for _, client in ipairs(clients) do
               if client.attached_buffers[vim.api.nvim_get_current_buf()] then
-                local buf_uri = vim.uri_from_bufnr(0)
+                local buf_path = vim.api.nvim_buf_get_name(0)
                 local settings = client.config.settings or {}
                 settings.yaml = settings.yaml or {}
                 settings.yaml["schemas"] = settings.yaml.schemas or {}
-                settings.yaml.schemas[config.schema] = buf_uri
+                settings.yaml.schemas[config.schema] = buf_path
 
                 client.notify("workspace/didChangeConfiguration", {
                   settings = settings,
@@ -114,26 +114,29 @@ vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
     if client and client.name == "yamlls" then
-      local buf_schema = vim.b[args.buf].yaml_schema
-      if buf_schema then
-        vim.schedule(function()
-          local buf_uri = vim.uri_from_bufnr(args.buf)
+      local ft = vim.bo[args.buf].filetype
+      if ft == "argocd-application" or ft == "argocd-applicationset" then
+        local buf_schema = vim.b[args.buf].yaml_schema
+        if buf_schema then
+          vim.schedule(function()
+            local buf_path = vim.api.nvim_buf_get_name(args.buf)
 
-          -- Ensure settings structure exists
-          client.config.settings = client.config.settings or {}
-          client.config.settings.yaml = client.config.settings.yaml or {}
-          client.config.settings.yaml.schemas = client.config.settings.yaml.schemas or {}
+            -- Ensure settings structure exists
+            client.config.settings = client.config.settings or {}
+            client.config.settings.yaml = client.config.settings.yaml or {}
+            client.config.settings.yaml.schemas = client.config.settings.yaml.schemas or {}
 
-          -- Set the schema for this specific file
-          client.config.settings.yaml.schemas[buf_schema] = buf_uri
+            -- Set the schema for this specific file
+            client.config.settings.yaml.schemas[buf_schema] = buf_path
 
-          -- Send configuration change to the server
-          client.notify("workspace/didChangeConfiguration", {
-            settings = client.config.settings,
-          })
+            -- Send configuration change to the server
+            client.notify("workspace/didChangeConfiguration", {
+              settings = client.config.settings,
+            })
 
-          vim.notify("Schema reapplied on LSP attach: " .. buf_schema, vim.log.levels.INFO)
-        end)
+            vim.notify("Schema reapplied on LSP attach: " .. buf_schema, vim.log.levels.INFO)
+          end)
+        end
       end
     end
   end,
