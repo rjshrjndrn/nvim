@@ -9,6 +9,7 @@ return {
     -- options for vim.diagnostic.config()
     -- LSP Server Settings
     ---@type lspconfig.options
+    on_attach = require("snacks.util").lsp.on,
     servers = {
       -- terraformls = {
       --   filetypes = { "tf", "terraform", "terraform-vars" },
