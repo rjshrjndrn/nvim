@@ -11,9 +11,6 @@ return {
     ---@type lspconfig.options
     on_attach = require("snacks.util").lsp.on,
     servers = {
-      -- terraformls = {
-      --   filetypes = { "tf", "terraform", "terraform-vars" },
-      -- },
       pyright = {
         settings = {
           python = {
@@ -22,10 +19,6 @@ return {
             venv = ".venv",
           },
         },
-      },
-      terraformls = {
-        cmd = { "terraform-lsp" },
-        filetypes = { "terraform" },
       },
       vtsls = {
         settings = {
