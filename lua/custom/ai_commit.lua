@@ -4,15 +4,21 @@ local M = {}
 local api_url = "https://opencode.ai/zen/v1/chat/completions"
 local model = "big-pickle"
 
-local system_prompt = [[You are a Git commit message generator. Given a git diff, write a concise, conventional commit message.
+local system_prompt = [[You are a Git commit message generator. Given a git diff, write a commit message.
+
+Format:
+type(scope): short description (under 50 chars)
+
+- Bullet point explaining what was done
+- Another bullet point if needed
+- Focus on functionality changes, not code details
 
 Rules:
-- Use conventional commit format: type(scope): description
 - Types: feat, fix, refactor, docs, style, test, chore, perf
-- Keep the first line under 72 characters
-- Focus on WHY the change was made, not WHAT changed
-- Be specific but concise
-- No markdown formatting, just plain text
+- Keep title under 50 characters
+- Wrap body at 72 characters
+- Use bullet points (- ) for the body
+- No markdown formatting, plain text only
 - Return ONLY the commit message, nothing else]]
 
 local function get_api_key()
@@ -92,10 +98,14 @@ end
 
 function M.generate()
   local api_key = get_api_key()
-  if not api_key then return end
+  if not api_key then
+    return
+  end
 
   local diff = get_staged_diff()
-  if not diff then return end
+  if not diff then
+    return
+  end
 
   -- Truncate diff if too large
   if #diff > 15000 then
@@ -110,7 +120,7 @@ function M.generate()
       { role = "system", content = system_prompt },
       { role = "user", content = "Generate a commit message for this diff:\n\n" .. diff },
     },
-    max_tokens = 200,
+    max_tokens = 300,
     temperature = 0.3,
   })
 
@@ -122,10 +132,17 @@ function M.generate()
   end
 
   local cmd = {
-    "curl", "-s", "-X", "POST", api_url,
-    "-H", "Content-Type: application/json",
-    "-H", "Authorization: Bearer " .. api_key,
-    "-d", "@" .. tmpfile,
+    "curl",
+    "-s",
+    "-X",
+    "POST",
+    api_url,
+    "-H",
+    "Content-Type: application/json",
+    "-H",
+    "Authorization: Bearer " .. api_key,
+    "-d",
+    "@" .. tmpfile,
   }
 
   local stdout = {}
