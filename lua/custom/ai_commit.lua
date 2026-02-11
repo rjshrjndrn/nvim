@@ -21,6 +21,51 @@ Rules:
 - No markdown formatting, plain text only
 - Return ONLY the commit message, nothing else]]
 
+local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+
+local function start_spinner(msg)
+  local buf = vim.api.nvim_create_buf(false, true)
+  local width = #msg + 4
+  local win = vim.api.nvim_open_win(buf, false, {
+    relative = "editor",
+    width = width,
+    height = 1,
+    row = vim.o.lines - 3,
+    col = vim.o.columns - width - 2,
+    style = "minimal",
+    border = "rounded",
+    noautocmd = true,
+  })
+  vim.api.nvim_set_option_value("winblend", 0, { win = win })
+
+  local idx = 0
+  local timer = vim.uv.new_timer()
+  timer:start(
+    0,
+    80,
+    vim.schedule_wrap(function()
+      if not vim.api.nvim_win_is_valid(win) then
+        timer:stop()
+        timer:close()
+        return
+      end
+      idx = (idx % #spinner_frames) + 1
+      local line = " " .. spinner_frames[idx] .. " " .. msg
+      pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, { line })
+    end)
+  )
+
+  return {
+    stop = function()
+      timer:stop()
+      timer:close()
+      if vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_win_close(win, true)
+      end
+    end,
+  }
+end
+
 local function get_api_key()
   local key = os.getenv("OPENCODE_API_KEY")
   if not key or key == "" then
@@ -112,7 +157,7 @@ function M.generate()
     diff = diff:sub(1, 15000) .. "\n... (truncated)"
   end
 
-  vim.notify("Generating commit message...", vim.log.levels.INFO)
+  local spinner = start_spinner("Generating commit message...")
 
   local payload = vim.fn.json_encode({
     model = model,
@@ -120,16 +165,19 @@ function M.generate()
       { role = "system", content = system_prompt },
       { role = "user", content = "Generate a commit message for this diff:\n\n" .. diff },
     },
-    max_tokens = 300,
+    max_tokens = 500,
     temperature = 0.3,
   })
 
   local tmpfile = vim.fn.tempname()
-  local f = io.open(tmpfile, "w")
-  if f then
-    f:write(payload)
-    f:close()
+  local f, err = io.open(tmpfile, "w")
+  if not f then
+    spinner.stop()
+    vim.notify("Failed to write temp file: " .. (err or "unknown"), vim.log.levels.ERROR)
+    return
   end
+  f:write(payload)
+  f:close()
 
   local cmd = {
     "curl",
@@ -146,8 +194,10 @@ function M.generate()
   }
 
   local stdout = {}
+  local stderr = {}
   vim.fn.jobstart(cmd, {
     stdout_buffered = true,
+    stderr_buffered = true,
     on_stdout = function(_, data)
       if data then
         for _, line in ipairs(data) do
@@ -157,38 +207,62 @@ function M.generate()
         end
       end
     end,
+    on_stderr = function(_, data)
+      if data then
+        for _, line in ipairs(data) do
+          if line ~= "" then
+            table.insert(stderr, line)
+          end
+        end
+      end
+    end,
     on_exit = function(_, exit_code)
       os.remove(tmpfile)
       vim.schedule(function()
-        if exit_code ~= 0 then
-          vim.notify("API request failed", vim.log.levels.ERROR)
-          return
+        spinner.stop()
+        local ok_outer, err_outer = pcall(function()
+          if exit_code ~= 0 then
+            local stderr_msg = table.concat(stderr, "\n")
+            vim.notify(
+              "API request failed (exit " .. exit_code .. "): " .. (stderr_msg ~= "" and stderr_msg or "unknown"),
+              vim.log.levels.ERROR
+            )
+            return
+          end
+
+          local response = table.concat(stdout, "")
+          if response == "" then
+            vim.notify("API returned empty response", vim.log.levels.ERROR)
+            return
+          end
+
+          local ok, decoded = pcall(vim.fn.json_decode, response)
+          if not ok or decoded == vim.NIL or type(decoded) ~= "table" then
+            vim.notify("Failed to parse API response: " .. response:sub(1, 200), vim.log.levels.ERROR)
+            return
+          end
+
+          if decoded.error then
+            vim.notify("API error: " .. (decoded.error.message or vim.inspect(decoded.error)), vim.log.levels.ERROR)
+            return
+          end
+
+          local msg = decoded.choices
+            and decoded.choices[1]
+            and decoded.choices[1].message
+            and decoded.choices[1].message.content
+
+          if not msg then
+            vim.notify("Unexpected API response structure: " .. response:sub(1, 200), vim.log.levels.ERROR)
+            return
+          end
+
+          msg = vim.trim(msg)
+          create_floating_window(msg)
+        end)
+        if not ok_outer then
+          vim.notify("AI commit error: " .. tostring(err_outer), vim.log.levels.ERROR)
         end
-
-        local response = table.concat(stdout, "")
-        local ok, decoded = pcall(vim.fn.json_decode, response)
-        if not ok then
-          vim.notify("Failed to parse API response", vim.log.levels.ERROR)
-          return
-        end
-
-        if decoded.error then
-          vim.notify("API error: " .. (decoded.error.message or "unknown"), vim.log.levels.ERROR)
-          return
-        end
-
-        local msg = decoded.choices
-          and decoded.choices[1]
-          and decoded.choices[1].message
-          and decoded.choices[1].message.content
-
-        if not msg then
-          vim.notify("No response from API", vim.log.levels.ERROR)
-          return
-        end
-
-        msg = vim.trim(msg)
-        create_floating_window(msg)
       end)
     end,
   })
