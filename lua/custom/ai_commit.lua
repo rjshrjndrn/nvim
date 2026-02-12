@@ -9,15 +9,11 @@ local system_prompt = [[You are a Git commit message generator. Given a git diff
 Format:
 type(scope): short description (under 50 chars)
 
-- Bullet point explaining what was done
-- Another bullet point if needed
-- Focus on functionality changes, not code details
+Why the change was made.
 
 Rules:
 - Types: feat, fix, refactor, docs, style, test, chore, perf
 - Keep title under 50 characters
-- Wrap body at 72 characters
-- Use bullet points (- ) for the body
 - No markdown formatting, plain text only
 - Return ONLY the commit message, nothing else]]
 
@@ -198,7 +194,10 @@ function M.generate()
 
   -- debug: dump payload for inspection
   local dbg = io.open("/tmp/ai_commit_debug.json", "w")
-  if dbg then dbg:write(payload); dbg:close() end
+  if dbg then
+    dbg:write(payload)
+    dbg:close()
+  end
 
   local cmd = {
     "curl",
@@ -282,14 +281,14 @@ function M.generate()
                   end
                 end
               end
-              if msg then break end
+              if msg then
+                break
+              end
             end
           end
           -- fallback for chat/completions format
           if not msg and decoded.choices then
-            msg = decoded.choices[1]
-              and decoded.choices[1].message
-              and decoded.choices[1].message.content
+            msg = decoded.choices[1] and decoded.choices[1].message and decoded.choices[1].message.content
           end
 
           if not msg then
