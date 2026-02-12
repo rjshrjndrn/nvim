@@ -1,8 +1,8 @@
 -- AI Commit Message Generator using OpenCode Zen API
 local M = {}
 
-local api_url = "https://opencode.ai/zen/v1/chat/completions"
-local model = "big-pickle"
+local api_url = "https://opencode.ai/zen/v1/responses"
+local model = "gpt-5-nano"
 
 local system_prompt = [[You are a Git commit message generator. Given a git diff, write a commit message.
 
@@ -75,10 +75,24 @@ local function get_api_key()
   return key
 end
 
-local function get_staged_diff()
-  local result = vim.fn.system("git diff --cached")
+local function get_git_root()
+  local dir = vim.fn.expand("%:p:h")
+  local root = vim.fn.systemlist("git -C " .. vim.fn.shellescape(dir) .. " rev-parse --show-toplevel")[1]
   if vim.v.shell_error ~= 0 then
-    vim.notify("Failed to get staged diff. Are you in a git repo?", vim.log.levels.ERROR)
+    return nil
+  end
+  return root
+end
+
+local function get_staged_diff()
+  local git_root = get_git_root()
+  if not git_root then
+    vim.notify("Not in a git repo", vim.log.levels.ERROR)
+    return nil
+  end
+  local result = vim.fn.system("git -C " .. vim.fn.shellescape(git_root) .. " diff --cached")
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Failed to get staged diff", vim.log.levels.ERROR)
     return nil
   end
   if result == "" then
@@ -88,7 +102,7 @@ local function get_staged_diff()
   return result
 end
 
-local function create_floating_window(content)
+local function create_floating_window(content, git_root)
   local buf = vim.api.nvim_create_buf(false, true)
   local lines = vim.split(content, "\n")
 
@@ -128,9 +142,9 @@ local function create_floating_window(content)
   vim.keymap.set("n", "<CR>", function()
     local msg = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
     vim.api.nvim_win_close(win, true)
-    -- Run git commit with the message
     local escaped_msg = msg:gsub("'", "'\\''")
-    local commit_result = vim.fn.system("git commit -m '" .. escaped_msg .. "'")
+    local git_cmd = "git -C " .. vim.fn.shellescape(git_root) .. " commit -m '" .. escaped_msg .. "'"
+    local commit_result = vim.fn.system(git_cmd)
     if vim.v.shell_error == 0 then
       vim.notify("Committed: " .. lines[1], vim.log.levels.INFO)
     else
@@ -144,6 +158,12 @@ end
 function M.generate()
   local api_key = get_api_key()
   if not api_key then
+    return
+  end
+
+  local git_root = get_git_root()
+  if not git_root then
+    vim.notify("Not in a git repo", vim.log.levels.ERROR)
     return
   end
 
@@ -161,12 +181,9 @@ function M.generate()
 
   local payload = vim.fn.json_encode({
     model = model,
-    messages = {
-      { role = "system", content = system_prompt },
-      { role = "user", content = "Generate a commit message for this diff:\n\n" .. diff },
-    },
-    max_tokens = 500,
-    temperature = 0.3,
+    input = system_prompt .. "\n\nGenerate a commit message for this diff:\n\n" .. diff,
+    max_output_tokens = 500,
+    reasoning = { effort = "low" },
   })
 
   local tmpfile = vim.fn.tempname()
@@ -178,6 +195,10 @@ function M.generate()
   end
   f:write(payload)
   f:close()
+
+  -- debug: dump payload for inspection
+  local dbg = io.open("/tmp/ai_commit_debug.json", "w")
+  if dbg then dbg:write(payload); dbg:close() end
 
   local cmd = {
     "curl",
@@ -242,15 +263,34 @@ function M.generate()
             return
           end
 
-          if decoded.error then
-            vim.notify("API error: " .. (decoded.error.message or vim.inspect(decoded.error)), vim.log.levels.ERROR)
+          if decoded.error and decoded.error ~= vim.NIL then
+            local err_msg = type(decoded.error) == "table" and (decoded.error.message or vim.inspect(decoded.error))
+              or tostring(decoded.error)
+            vim.notify("API error: " .. err_msg, vim.log.levels.ERROR)
             return
           end
 
-          local msg = decoded.choices
-            and decoded.choices[1]
-            and decoded.choices[1].message
-            and decoded.choices[1].message.content
+          -- responses API returns output[].content[].text
+          local msg = nil
+          if decoded.output then
+            for _, item in ipairs(decoded.output) do
+              if item.type == "message" and item.content then
+                for _, c in ipairs(item.content) do
+                  if c.type == "output_text" then
+                    msg = c.text
+                    break
+                  end
+                end
+              end
+              if msg then break end
+            end
+          end
+          -- fallback for chat/completions format
+          if not msg and decoded.choices then
+            msg = decoded.choices[1]
+              and decoded.choices[1].message
+              and decoded.choices[1].message.content
+          end
 
           if not msg then
             vim.notify("Unexpected API response structure: " .. response:sub(1, 200), vim.log.levels.ERROR)
@@ -258,7 +298,7 @@ function M.generate()
           end
 
           msg = vim.trim(msg)
-          create_floating_window(msg)
+          create_floating_window(msg, git_root)
         end)
         if not ok_outer then
           vim.notify("AI commit error: " .. tostring(err_outer), vim.log.levels.ERROR)
