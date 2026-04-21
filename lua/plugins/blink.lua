@@ -4,6 +4,9 @@ return {
   version = "*",
   opts = {
     -- keymap = { preset = "default" },
+    sources = {
+      min_keyword_length = 3,
+    },
     completion = {
       documentation = {
         auto_show = true,
