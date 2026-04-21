@@ -1,5 +1,6 @@
 return {
-  "rjshrjndrn/pi.nvim",
+  -- "rjshrjndrn/pi.nvim",
+  dir = "/home/skyent/Documents/Projects/pi.nvim",
   config = function()
     require("pi").setup({
       -- defaults are fine, or override:
