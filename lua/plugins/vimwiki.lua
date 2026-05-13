@@ -47,18 +47,21 @@ local M = {
 
         -- If fold starts with <details>, look for <summary> on next lines
         if line:match("<details") then
+          -- Preserve indent so Neovim's fold separator char eats
+          -- whitespace instead of the summary's first character
+          local indent = line:match("^(%s*)") or ""
           for i = fstart + 1, math.min(fstart + 3, fend) do
             local next_line = vim.fn.getline(i)
             local summary = next_line:match("<summary>(.-)</summary>")
             if summary then
               return {
-                { summary, "VimwikiFoldSummary" },
+                { indent .. summary, "VimwikiFoldSummary" },
                 { fold_info, "VimwikiFoldInfo" },
               }
             end
           end
           return {
-            { "<details>", "VimwikiFoldSummary" },
+            { indent .. "<details>", "VimwikiFoldSummary" },
             { fold_info, "VimwikiFoldInfo" },
           }
         end
