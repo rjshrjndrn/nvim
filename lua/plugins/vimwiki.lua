@@ -33,7 +33,7 @@ local M = {
         callback = function()
           vim.wo.foldmethod = "expr"
           vim.wo.foldexpr = "v:lua.VimwikiFold(v:lnum)"
-          vim.wo.foldlevel = 99 -- start unfolded
+          vim.wo.foldlevel = 0 -- start folded
           vim.wo.foldtext = "v:lua.VimwikiFoldText()"
         end,
       })
