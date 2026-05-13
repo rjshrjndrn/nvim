@@ -23,6 +23,10 @@ local M = {
       vim.g.vimwiki_listsyms = " ○◐●✓"
     end,
     config = function()
+      -- Highlight groups for fold text
+      vim.api.nvim_set_hl(0, "VimwikiFoldSummary", { italic = true, bold = true, fg = "#c0caf5" })
+      vim.api.nvim_set_hl(0, "VimwikiFoldInfo", { fg = "#565f89", italic = true }) -- dim/transparent
+
       -- Custom folding: headings + <details> blocks
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "vimwiki",
@@ -36,25 +40,34 @@ local M = {
 
       function _G.VimwikiFoldText()
         local fstart = vim.v.foldstart
+        local fend = vim.v.foldend
         local line = vim.fn.getline(fstart)
+        local lines = fend - fstart + 1
+        local fold_info = "  󰁂 " .. lines .. " lines "
 
         -- If fold starts with <details>, look for <summary> on next lines
         if line:match("<details") then
-          for i = fstart + 1, math.min(fstart + 3, vim.v.foldend) do
+          for i = fstart + 1, math.min(fstart + 3, fend) do
             local next_line = vim.fn.getline(i)
             local summary = next_line:match("<summary>(.-)</summary>")
             if summary then
-              local lines = vim.v.foldend - fstart + 1
-              return "▶ " .. summary .. " (" .. lines .. " lines)"
+              return {
+                { summary, "VimwikiFoldSummary" },
+                { fold_info, "VimwikiFoldInfo" },
+              }
             end
           end
-          local lines = vim.v.foldend - fstart + 1
-          return "▶ <details> (" .. lines .. " lines)"
+          return {
+            { "<details>", "VimwikiFoldSummary" },
+            { fold_info, "VimwikiFoldInfo" },
+          }
         end
 
-        -- Default: show first line
-        local lines = vim.v.foldend - fstart + 1
-        return line .. " (" .. lines .. " lines)"
+        -- Default: show first line with syntax, append dim fold info
+        return {
+          { line .. " ", "Normal" },
+          { fold_info, "VimwikiFoldInfo" },
+        }
       end
 
       function _G.VimwikiFold(lnum)
