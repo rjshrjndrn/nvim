@@ -2,6 +2,16 @@ return {
   "folke/snacks.nvim",
   opts = function(_, opts)
     opts.dashboard = { enabled = false }
+    opts.image = {
+      enabled = true,
+      backend = "kitty",
+      doc = {
+        inline = true,
+        float = true,
+        max_width = 60,
+        max_height = 30,
+      },
+    }
     opts.explorer = { enabled = false }
     opts.scratch = {
       ft = "markdown",
