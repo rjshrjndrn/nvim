@@ -1,0 +1,14 @@
+{
+  "Details block": {
+    "prefix": "details",
+    "body": [
+      "<details>",
+      "<summary>${1:Summary}</summary>",
+      "",
+      "${TM_SELECTED_TEXT:$0}",
+      "",
+      "</details>"
+    ],
+    "description": "Collapsible details/summary block (wraps yanked text)"
+  }
+}
