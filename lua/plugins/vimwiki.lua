@@ -20,7 +20,7 @@ local M = {
       vim.g.vimwiki_ext2syntax =
         { [".md"] = "markdown", [".mkd"] = "markdown", [".wiki"] = "media", [".rajesh"] = "markdown" }
       vim.g.vimwiki_folding = "custom"
-      vim.g.vimwiki_listsyms = " ○◐●✓"
+      vim.g.vimwiki_listsyms = " x"
     end,
     config = function()
       -- Highlight groups for fold text
