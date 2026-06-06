@@ -1,16 +1,19 @@
 return {
   "neovim/nvim-lspconfig",
-  opts = {
-    diagnostics = {
+  ---@param opts PluginLspOpts
+  opts = function(_, opts)
+    opts.diagnostics = {
       virtual_text = {
         current_line = true,
       },
-    },
-    -- options for vim.diagnostic.config()
-    -- LSP Server Settings
-    ---@type lspconfig.options
-    on_attach = require("snacks.util").lsp.on,
-    servers = {
+    }
+
+    -- Wrap in function to defer require until LSP actually attaches
+    opts.on_attach = function(client, bufnr)
+      require("snacks.util").lsp.on(client, bufnr)
+    end
+
+    opts.servers = vim.tbl_deep_extend("force", opts.servers or {}, {
       pyright = {
         settings = {
           python = {
@@ -60,10 +63,8 @@ return {
           },
         },
       },
-
       yamlls = {
         filetypes = { "yml", "yaml" },
-        -- lazy-load schemastore when needed
         settings = {
           redhat = { telemetry = { enabled = false } },
           yaml = {
@@ -73,12 +74,10 @@ return {
             },
             validate = true,
             schemaStore = {
-              -- Must disable built-in schemaStore support to use
-              -- schemas from SchemaStore.nvim plugin
               enable = false,
-              -- Avoid TypeError: Cannot read properties of undefined (reading 'length')
               url = "",
             },
+            -- Deferred: require only runs when lspconfig loads, not at startup
             schemas = require("schemastore").yaml.schemas(),
           },
         },
@@ -95,11 +94,6 @@ return {
           cmd = { "nil" },
         },
       },
-    },
-    --       vim.diagnostic.config({ virtual_text = false, signs = false }, bufnr)
-    --     end
-    --     require("lspconfig")[server].setup(opts)
-    --   end,
-    -- },
-  },
+    })
+  end,
 }
