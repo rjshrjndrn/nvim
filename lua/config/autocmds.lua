@@ -4,6 +4,14 @@
 
 local autocmd = vim.api.nvim_create_autocmd
 
+-- Fix: Override LazyVim's TextYankPost that calls non-existent vim.hl.hl_op()
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("lazyvim_highlight_yank", { clear = true }),
+  callback = function()
+    vim.hl.on_yank()
+  end,
+})
+
 -- Disable undo for specific file types (like encrypted files)
 autocmd({ "BufRead", "BufNewFile" }, {
   pattern = { "*.age", "*.gpg", "*.enc", "*.encrypted" },
